@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>សៀវភៅវត្តមានឌីជីថល</title>
+    <!-- ភ្ជាប់ Font ខ្មែរ -->
+    <link href="https://fonts.googleapis.com/css2?family=Khmer+OS+Siemreap&display=swap" rel="stylesheet">
+    <!-- ភ្ជាប់ MQTT Library សម្រាប់បញ្ជា ESP32 -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Khmer OS Siemreap', sans-serif;
+        }
+        body {
+            background-color: #2f4e7d; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background-color: #f4f6f9;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #2f4e7d;
+            font-weight: bold;
+            font-size: 14px;
+            margin: 0;
+        }
+        .title {
+            color: #2f4e7d;
+            font-weight: bold;
+            font-size: 22px;
+            margin: 5px 0 10px 0;
+        }
+        .description {
+            color: #7f8c8d;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            color: #555;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        /* Style សម្រាប់ប្រអប់ Input ទាំងអស់ */
+        input[type="text"], input[list] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            background-color: white;
+        }
+        input[type="text"]:focus, input[list]:focus {
+            border-color: #2f4e7d;
+        }
+        .btn-submit {
+            background-color: #2f4e7d;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .btn-submit:hover {
+            background-color: #1e355a;
+        }
+        .btn-submit:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .status-message {
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+        }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="icon">📱</div>
+        <p class="subtitle">វិទ្យាស្ថានជាតិពហុបច្ចេកទេសកម្ពុជា</p>
+        <h2 class="title">សៀវភៅវត្តមានឌីជីថល</h2>
+        <p class="description">សូមស្កេនដើម្បីបញ្ជាក់វត្តមានរបស់អ្នកថ្ងៃនេះ</p>
+
+        <div class="input-group">
+            <label for="studentName">លេខរៀង និងឈ្មោះ (ID & Name)</label>
+            <input list="studentList" id="studentName" placeholder="វាយលេខរៀង (ឧ. 7) រួចចុចក្រៅប្រអប់..." required autocomplete="off" onblur="autoCompleteName()">
+            <datalist id="studentList">
+                <option value="01. KEO RAVIN"></option>
+                <option value="02. DOS UDOM"></option>
+                <option value="03. THAV SIHOUNG"></option>
+                <option value="04. THEN PONLEU"></option>
+                <option value="05. TOUCH DONA"></option>
+                <option value="06. THAT PHEAREAK"></option>
+                <option value="07. BEAV CHHUNLY"></option>
+                <option value="08. PHAL SOPHORN"></option>
+                <option value="09. MON DAVIT"></option>
+                <option value="10. MEAS SOPOL"></option>
+                <option value="11. MOM SEYAROW"></option>
+                <option value="12. MET SONEAT"></option>
+                <option value="13. LORN NOEN"></option>
+                <option value="14. VICHET VATTENA"></option>
+                <option value="15. SAN KIMSAY"></option>
+                <option value="16. SOEURN RAVY"></option>
+                <option value="17. SEN SEAKNANN"></option>
+                <option value="18. SEM SINOUN"></option>
+                <option value="19. SREAT LIMHENG"></option>
+                <option value="20. HOEUM SIKHEN"></option>
+                <option value="21. PO CHANDARA"></option>
+            </datalist>
+        </div>
+
+        <div class="input-group">
+            <label for="note">ចំណាំ (Note) - មិនចាំបាច់ក៏បាន</label>
+            <input type="text" id="note" placeholder="ឧ. មកយឺតដោយសារភ្លៀង">
+        </div>
+
+        <button class="btn-submit" id="submitBtn" onclick="sendCheckIn()">ស្កេនវត្តមានឥឡូវនេះ</button>
+
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script>
+        // 🔴 Link របស់ Google Apps Script ដដែល
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymDCQxCkhTSxebnjd5QfvneBB60WfLhmHy5LJEvVm_rZvvgAb8d68uYHevFQ8uwcMZUg/exec";
+        
+        const studentArray = [
+            "01. KEO RAVIN", "02. DOS UDOM", "03. THAV SIHOUNG", "04. THEN PONLEU",
+            "05. TOUCH DONA", "06. THAT PHEAREAK", "07. BEAV CHHUNLY", "08. PHAL SOPHORN",
+            "09. MON DAVIT", "10. MEAS SOPOL", "11. MOM SEYAROW", "12. MET SONEAT",
+            "13. LORN NOEN", "14. VICHET VATTENA", "15. SAN KIMSAY", "16. SOEURN RAVY",
+            "17. SEN SEAKNANN", "18. SEM SINOUN", "19. SREAT LIMHENG", "20. HOEUM SIKHEN",
+            "21. PO CHANDARA"
+        ];
+
+        function autoCompleteName() {
+            var inputField = document.getElementById("studentName");
+            var val = inputField.value.trim();
+            if (val === "") return;
+
+            if (!isNaN(val)) {
+                var searchId = parseInt(val, 10);
+                var match = studentArray.find(s => parseInt(s.substring(0, 2), 10) === searchId);
+                if (match) {
+                    inputField.value = match;
+                }
+            } else {
+                var match = studentArray.find(s => s.toLowerCase().includes(val.toLowerCase()));
+                if (match) {
+                    inputField.value = match;
+                }
+            }
+        }
+
+        const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+        function checkTimeStatus() {
+            var now = new Date();
+            var hours = now.getHours();
+            var minutes = now.getMinutes();
+            var totalMinutes = (hours * 60) + minutes;
+
+            // 🟢 កាលវិភាគព្រឹក និងរសៀល ដូចគ្នា ១០០% នឹង Google Script 
+            var mStart = 6 * 60, mOnTime = 8 * 60, mLate = 8 * 60 + 15;
+            var mOutStart = 10 * 60 + 45, mOutEnd = 12 * 60;
+            var aStart = 12 * 60 + 1, aOnTime = 13 * 60, aLate = 13 * 60 + 15;
+            var aOutStart = 15 * 60 + 45, aOutEnd = 17 * 60;
+
+            if (totalMinutes >= mStart && totalMinutes <= mOnTime) return "Morning (ON TIME)";
+            if (totalMinutes > mOnTime && totalMinutes <= mLate) return "Morning (LATE)";
+            if (totalMinutes >= mOutStart && totalMinutes <= mOutEnd) return "Morning (CHECK-OUT)";
+            if (totalMinutes >= aStart && totalMinutes <= aOnTime) return "Afternoon (ON TIME)";
+            if (totalMinutes > aOnTime && totalMinutes <= aLate) return "Afternoon (LATE)";
+            if (totalMinutes >= aOutStart && totalMinutes <= aOutEnd) return "Afternoon (CHECK-OUT)";
+            
+            return "ABSENT";
+        }
+
+        function sendCheckIn() {
+            autoCompleteName(); 
+
+            var studentName = document.getElementById("studentName").value.trim();
+            var note = document.getElementById("note").value;
+            var btn = document.getElementById("submitBtn");
+            var statusMsg = document.getElementById("statusMessage");
+
+            if (studentName === "") {
+                statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលលេខរៀង ឬឈ្មោះរបស់អ្នក!";
+                statusMsg.className = "status-message error";
+                statusMsg.style.display = "block";
+                return;
+            }
+
+            var timeStatus = checkTimeStatus();
+            
+            if (timeStatus === "ABSENT") {
+                statusMsg.innerHTML = "❌ ហួសម៉ោងស្កេនវត្តមានហើយ!";
+                statusMsg.className = "status-message error";
+                statusMsg.style.display = "block";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = "កំពុងស្កេន...";
+            statusMsg.style.display = "none";
+
+            var payload = {
+                source: "webapp",
+                name: studentName,
+                time_status: timeStatus,
+                note: note
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "Success") {
+                    statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាព: " + timeStatus;
+                    statusMsg.className = "status-message success";
+                    statusMsg.style.display = "block";
+
+                    var mqttMessage = JSON.stringify({
+                        status: "success",
+                        name: studentName
+                    });
+                    mqttClient.publish('classroom/checkin', mqttMessage);
+
+                    document.getElementById("studentName").value = "";
+                    document.getElementById("note").value = "";
+                } else {
+                    statusMsg.innerHTML = "❌ មានបញ្ហា: " + data;
+                    statusMsg.className = "status-message error";
+                    statusMsg.style.display = "block";
+                }
+            })
+            .catch(error => {
+                statusMsg.innerHTML = "❌ មិនអាចភ្ជាប់ទៅកាន់សើវើបានទេ!";
+                statusMsg.className = "status-message error";
+                statusMsg.style.display = "block";
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = "ស្កេនវត្តមានឥឡូវនេះ";
+            });
+        }
+    </script>
+</body>
+</html>
