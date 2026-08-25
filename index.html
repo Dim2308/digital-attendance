@@ -3,282 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>សៀវភៅវត្តមានឌីជីថល</title>
-    <!-- ភ្ជាប់ Font ខ្មែរ -->
-    <link href="https://fonts.googleapis.com/css2?family=Khmer+OS+Siemreap&display=swap" rel="stylesheet">
-    <!-- ភ្ជាប់ MQTT Library សម្រាប់បញ្ជា ESP32 -->
+    <title>សៀវភៅវត្តមានឌីជីថល Pro</title>
+    <link href="https://fonts.googleapis.com/css?family=Khmer+OS+Siemreap&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
     <style>
-        * {
-            box-sizing: border-box;
-            font-family: 'Khmer OS Siemreap', sans-serif;
-        }
-        body {
-            background-color: #2f4e7d; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-        .card {
-            background-color: #f4f6f9;
-            width: 100%;
-            max-width: 400px;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            text-align: center;
-        }
-        .icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-        }
-        .subtitle {
-            color: #2f4e7d;
-            font-weight: bold;
-            font-size: 14px;
-            margin: 0;
-        }
-        .title {
-            color: #2f4e7d;
-            font-weight: bold;
-            font-size: 22px;
-            margin: 5px 0 10px 0;
-        }
-        .description {
-            color: #7f8c8d;
-            font-size: 12px;
-            margin-bottom: 20px;
-        }
-        .input-group {
-            text-align: left;
-            margin-bottom: 15px;
-        }
-        .input-group label {
-            display: block;
-            color: #555;
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        /* Style សម្រាប់ប្រអប់ Input ទាំងអស់ */
-        input[type="text"], input[list] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-            background-color: white;
-        }
-        input[type="text"]:focus, input[list]:focus {
-            border-color: #2f4e7d;
-        }
-        .btn-submit {
-            background-color: #2f4e7d;
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: 0.3s;
-        }
-        .btn-submit:hover {
-            background-color: #1e355a;
-        }
-        .btn-submit:disabled {
-            background-color: #95a5a6;
-            cursor: not-allowed;
-        }
-        .status-message {
-            margin-top: 15px;
-            font-size: 14px;
-            font-weight: bold;
-            display: none;
-        }
-        .success { color: #27ae60; }
-        .error { color: #e74c3c; }
+        * { box-sizing: border-box; font-family: 'Khmer OS Siemreap', sans-serif; transition: 0.3s; }
+        body { background-color: #2f4e7d; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background-color: #ffffff; width: 100%; max-width: 400px; border-radius: 20px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; position: relative; }
+        
+        /* Dark Mode */
+        body.dark-mode { background-color: #121212; }
+        body.dark-mode .card { background-color: #1e1e1e; color: #ffffff; box-shadow: 0 10px 20px rgba(255,255,255,0.05); }
+        body.dark-mode .subtitle, body.dark-mode .title { color: #4facfe; }
+        body.dark-mode input[type="text"], body.dark-mode input[list], body.dark-mode input[type="number"] { background-color: #2c2c2c; color: white; border: 1px solid #444; }
+        body.dark-mode label { color: #bbb; }
+        
+        .theme-toggle { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer; }
+        .realtime-clock { font-size: 28px; font-weight: bold; color: #e74c3c; margin: 10px 0; letter-spacing: 2px; }
+        
+        .subtitle { color: #2f4e7d; font-weight: bold; font-size: 14px; margin: 0; }
+        .title { color: #2f4e7d; font-weight: bold; font-size: 22px; margin: 5px 0 10px 0; }
+        .input-group { text-align: left; margin-bottom: 15px; }
+        .input-group label { display: block; color: #555; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[list], input[type="number"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; }
+        .btn-submit { background-color: #2f4e7d; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-submit:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .status-message { margin-top: 15px; font-size: 14px; font-weight: bold; display: none; }
+        .success { color: #27ae60; } .error { color: #e74c3c; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="icon">📱</div>
-        <p class="subtitle">វិទ្យាស្ថានជាតិពហុបច្ចេកទេសកម្ពុជា</p>
-        <h2 class="title">សៀវភៅវត្តមានឌីជីថល</h2>
-        <p class="description">សូមស្កេនដើម្បីបញ្ជាក់វត្តមានរបស់អ្នកថ្ងៃនេះ</p>
-
-        <div class="input-group">
-            <label for="studentName">លេខរៀង និងឈ្មោះ (ID & Name)</label>
-            <input list="studentList" id="studentName" placeholder="វាយលេខរៀង (ឧ. 7) រួចចុចក្រៅប្រអប់..." required autocomplete="off" onblur="autoCompleteName()">
-            <datalist id="studentList">
-                <option value="01. KEO RAVIN"></option>
-                <option value="02. DOS UDOM"></option>
-                <option value="03. THAV SIHOUNG"></option>
-                <option value="04. THEN PONLEU"></option>
-                <option value="05. TOUCH DONA"></option>
-                <option value="06. THAT PHEAREAK"></option>
-                <option value="07. BEAV CHHUNLY"></option>
-                <option value="08. PHAL SOPHORN"></option>
-                <option value="09. MON DAVIT"></option>
-                <option value="10. MEAS SOPOL"></option>
-                <option value="11. MOM SEYAROW"></option>
-                <option value="12. MET SONEAT"></option>
-                <option value="13. LORN NOEN"></option>
-                <option value="14. VICHET VATTENA"></option>
-                <option value="15. SAN KIMSAY"></option>
-                <option value="16. SOEURN RAVY"></option>
-                <option value="17. SEN SEAKNANN"></option>
-                <option value="18. SEM SINOUN"></option>
-                <option value="19. SREAT LIMHENG"></option>
-                <option value="20. HOEUM SIKHEN"></option>
-                <option value="21. PO CHANDARA"></option>
-            </datalist>
-        </div>
-
-        <div class="input-group">
-            <label for="note">ចំណាំ (Note) - មិនចាំបាច់ក៏បាន</label>
-            <input type="text" id="note" placeholder="ឧ. មកយឺតដោយសារភ្លៀង">
-        </div>
-
-        <button class="btn-submit" id="submitBtn" onclick="sendCheckIn()">ស្កេនវត្តមានឥឡូវនេះ</button>
-
-        <div class="status-message" id="statusMessage"></div>
+<div class="card">
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    <p class="subtitle">វិទ្យាស្ថានជាតិពហុបច្ចេកទេសកម្ពុជា</p>
+    <h2 class="title">សៀវភៅវត្តមានឌីជីថល</h2>
+    
+    <div class="realtime-clock" id="clockDisplay">00:00:00 AM</div>
+    
+    <div class="input-group">
+        <label for="studentName">លេខរៀង និងឈ្មោះ (ID & Name)</label>
+        <input list="studentList" id="studentName" placeholder="វាយលេខរៀង (ឧ. 07)..." required>
+        <datalist id="studentList">
+            <option value="01. KEO RAVIN"></option> <option value="02. DOS UDOM"></option>
+            <option value="03. THAV SIHOUNG"></option> <option value="04. THEN PONLEU"></option>
+            <option value="05. TOUCH DONA"></option> <option value="06. THAT PHEAREAK"></option>
+            <option value="07. BEAV CHHUNLY"></option> <option value="08. PHAL SOPHORN"></option>
+            <option value="09. MON DAVIT"></option> <option value="10. MEAS SOPOL"></option>
+            <option value="11. MOM SEYAROW"></option> <option value="12. MET SONEAT"></option>
+            <option value="13. LORN NOEN"></option> <option value="14. VICHET VATTENA"></option>
+            <option value="15. SAN KIMSAY"></option> <option value="16. SOEURN RAVY"></option>
+            <option value="17. SEN SEAKNANN"></option> <option value="18. SEM SINOUN"></option>
+            <option value="19. SREAT LIMHENG"></option> <option value="20. HOEUM SIKHEN"></option>
+            <option value="21. PO CHANDARA"></option>
+        </datalist>
     </div>
+    
+    <div class="input-group">
+        <label for="note">ចំណាំ (Note) - មិនចាំបាច់ក៏បាន</label>
+        <input type="text" id="note" placeholder="ឧ. មកយឺតដោយសារភ្លៀង">
+    </div>
+    <button class="btn-submit" id="submitBtn" onclick="sendCheckIn()">ស្កេនវត្តមានឥឡូវនេះ</button>
+    <div class="status-message" id="statusMessage"></div>
 
-    <script>
-        // 🔴 Link របស់ Google Apps Script ដដែល
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymDCQxCkhTSxebnjd5QfvneBB60WfLhmHy5LJEvVm_rZvvgAb8d68uYHevFQ8uwcMZUg/exec";
+    <!-- 🟢 Admin OTA Enrollment -->
+    <hr style="margin: 20px 0; border: 0.5px solid #ccc;">
+    <h3 style="color: #2f4e7d; font-size: 16px;">+ ចុះឈ្មោះសិស្សថ្មី (Admin OTA)</h3>
+    <div class="input-group">
+        <label>លេខរៀង ID ថ្មី (1 ដល់ 127)</label>
+        <input type="number" id="newId" placeholder="ឧទាហរណ៍៖ 22" min="1" max="127">
+    </div>
+    <div class="input-group">
+        <label>ឈ្មោះពេញ (Full Name)</label>
+        <input type="text" id="newName" placeholder="ឧទាហរណ៍៖ 22. NEW STUDENT">
+    </div>
+    <button class="btn-submit" style="background-color: #27ae60;" onclick="startEnrollment()">ចាប់ផ្តើមស្កេនក្រយៅដៃ</button>
+</div>
+
+<script>
+    function toggleTheme() {
+        document.body.classList.toggle("dark-mode");
+        document.querySelector(".theme-toggle").innerHTML = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
+    }
+
+    setInterval(() => {
+        document.getElementById("clockDisplay").innerText = new Date().toLocaleTimeString('en-US', { hour12: true });
+    }, 1000);
+
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymDCQxCkhTSxebnjd5QfvneBB60WfLhmHy5LJEvVm_rZvvgAb8d68uYHevFQ8uwcMZUg/exec"; // 🔴 ត្រូវប្រាកដថាប្រើ Link ថ្មី
+    const urlParams = new URLSearchParams(window.location.search);
+    const scanMethod = urlParams.get('method') || "Manual Link";
+    const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+    function checkTimeStatus() {
+        var now = new Date(); var totalMinutes = (now.getHours() * 60) + now.getMinutes();
+        if (totalMinutes >= 360 && totalMinutes <= 480) return "Morning (ON TIME)";
+        if (totalMinutes > 480 && totalMinutes <= 495) return "Morning (LATE)";
+        if (totalMinutes >= 645 && totalMinutes <= 720) return "Morning (CHECK-OUT)";
+        if (totalMinutes >= 721 && totalMinutes <= 780) return "Afternoon (ON TIME)";
+        if (totalMinutes > 780 && totalMinutes <= 795) return "Afternoon (LATE)";
+        if (totalMinutes >= 945 && totalMinutes <= 1020) return "Afternoon (CHECK-OUT)";
+        return "ABSENT";
+    }
+
+    function sendCheckIn() {
+        var studentName = document.getElementById("studentName").value.trim();
+        var note = document.getElementById("note").value;
+        var btn = document.getElementById("submitBtn");
+        var statusMsg = document.getElementById("statusMessage");
+
+        if (studentName === "") {
+            statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលលេខរៀង ឬឈ្មោះរបស់អ្នក!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
+        }
+
+        var timeStatus = checkTimeStatus();
+        if (timeStatus === "ABSENT") {
+            statusMsg.innerHTML = "❌ ហួសម៉ោងស្កេនវត្តមានហើយ!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
+        }
+
+        btn.disabled = true; btn.innerHTML = "កំពុងស្កេន..."; statusMsg.style.display = "none";
         
-        const studentArray = [
-            "01. KEO RAVIN", "02. DOS UDOM", "03. THAV SIHOUNG", "04. THEN PONLEU",
-            "05. TOUCH DONA", "06. THAT PHEAREAK", "07. BEAV CHHUNLY", "08. PHAL SOPHORN",
-            "09. MON DAVIT", "10. MEAS SOPOL", "11. MOM SEYAROW", "12. MET SONEAT",
-            "13. LORN NOEN", "14. VICHET VATTENA", "15. SAN KIMSAY", "16. SOEURN RAVY",
-            "17. SEN SEAKNANN", "18. SEM SINOUN", "19. SREAT LIMHENG", "20. HOEUM SIKHEN",
-            "21. PO CHANDARA"
-        ];
-
-        function autoCompleteName() {
-            var inputField = document.getElementById("studentName");
-            var val = inputField.value.trim();
-            if (val === "") return;
-
-            if (!isNaN(val)) {
-                var searchId = parseInt(val, 10);
-                var match = studentArray.find(s => parseInt(s.substring(0, 2), 10) === searchId);
-                if (match) {
-                    inputField.value = match;
-                }
+        fetch(GOOGLE_SCRIPT_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ source: "webapp", name: studentName, time_status: timeStatus, note: note, method: scanMethod }) 
+        })
+        .then(response => response.text())
+        .then(data => {
+            if (data === "Success") {
+                statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាពៈ " + timeStatus;
+                statusMsg.className = "status-message success"; statusMsg.style.display = "block";
+                
+                // បាញ់ MQTT ប្រាប់ ESP32 ជាទម្រង់ JSON
+                mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "checkin", name: studentName }));
+                document.getElementById("studentName").value = ""; document.getElementById("note").value = "";
             } else {
-                var match = studentArray.find(s => s.toLowerCase().includes(val.toLowerCase()));
-                if (match) {
-                    inputField.value = match;
-                }
+                statusMsg.innerHTML = "❌ មានបញ្ហា " + data;
+                statusMsg.className = "status-message error"; statusMsg.style.display = "block";
             }
+        })
+        .catch(error => {
+            statusMsg.innerHTML = "❌ មិនអាចភ្ជាប់ទៅសើវើបានទេ!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block";
+        }).finally(() => { btn.disabled = false; btn.innerHTML = "ស្កេនវត្តមានឥឡូវនេះ"; });
+    }
+
+    function startEnrollment() {
+        var id = document.getElementById("newId").value;
+        var name = document.getElementById("newName").value.trim();
+        var statusMsg = document.getElementById("statusMessage");
+
+        if (id === "" || name === "") {
+            statusMsg.innerHTML = "❌ សូមបំពេញលេខ ID និងឈ្មោះឱ្យបានត្រឹមត្រូវ!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
         }
 
-        const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
-
-        function checkTimeStatus() {
-            var now = new Date();
-            var hours = now.getHours();
-            var minutes = now.getMinutes();
-            var totalMinutes = (hours * 60) + minutes;
-
-            // 🟢 កាលវិភាគព្រឹក និងរសៀល ដូចគ្នា ១០០% នឹង Google Script 
-            var mStart = 6 * 60, mOnTime = 8 * 60, mLate = 8 * 60 + 15;
-            var mOutStart = 10 * 60 + 45, mOutEnd = 12 * 60;
-            var aStart = 12 * 60 + 1, aOnTime = 13 * 60, aLate = 13 * 60 + 15;
-            var aOutStart = 15 * 60 + 45, aOutEnd = 17 * 60;
-
-            if (totalMinutes >= mStart && totalMinutes <= mOnTime) return "Morning (ON TIME)";
-            if (totalMinutes > mOnTime && totalMinutes <= mLate) return "Morning (LATE)";
-            if (totalMinutes >= mOutStart && totalMinutes <= mOutEnd) return "Morning (CHECK-OUT)";
-            if (totalMinutes >= aStart && totalMinutes <= aOnTime) return "Afternoon (ON TIME)";
-            if (totalMinutes > aOnTime && totalMinutes <= aLate) return "Afternoon (LATE)";
-            if (totalMinutes >= aOutStart && totalMinutes <= aOutEnd) return "Afternoon (CHECK-OUT)";
-            
-            return "ABSENT";
-        }
-
-        function sendCheckIn() {
-            autoCompleteName(); 
-
-            var studentName = document.getElementById("studentName").value.trim();
-            var note = document.getElementById("note").value;
-            var btn = document.getElementById("submitBtn");
-            var statusMsg = document.getElementById("statusMessage");
-
-            if (studentName === "") {
-                statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលលេខរៀង ឬឈ្មោះរបស់អ្នក!";
-                statusMsg.className = "status-message error";
-                statusMsg.style.display = "block";
-                return;
-            }
-
-            var timeStatus = checkTimeStatus();
-            
-            if (timeStatus === "ABSENT") {
-                statusMsg.innerHTML = "❌ ហួសម៉ោងស្កេនវត្តមានហើយ!";
-                statusMsg.className = "status-message error";
-                statusMsg.style.display = "block";
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = "កំពុងស្កេន...";
-            statusMsg.style.display = "none";
-
-            var payload = {
-                source: "webapp",
-                name: studentName,
-                time_status: timeStatus,
-                note: note
-            };
-
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.text())
-            .then(data => {
-                if (data === "Success") {
-                    statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាព: " + timeStatus;
-                    statusMsg.className = "status-message success";
-                    statusMsg.style.display = "block";
-
-                    var mqttMessage = JSON.stringify({
-                        status: "success",
-                        name: studentName
-                    });
-                    mqttClient.publish('classroom/checkin', mqttMessage);
-
-                    document.getElementById("studentName").value = "";
-                    document.getElementById("note").value = "";
-                } else {
-                    statusMsg.innerHTML = "❌ មានបញ្ហា: " + data;
-                    statusMsg.className = "status-message error";
-                    statusMsg.style.display = "block";
-                }
-            })
-            .catch(error => {
-                statusMsg.innerHTML = "❌ មិនអាចភ្ជាប់ទៅកាន់សើវើបានទេ!";
-                statusMsg.className = "status-message error";
-                statusMsg.style.display = "block";
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = "ស្កេនវត្តមានឥឡូវនេះ";
-            });
-        }
-    </script>
+        // បាញ់សារ MQTT ប្រាប់ ESP32 ឱ្យបើកកាមេរ៉ាស្កេន
+        mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "enroll", id: parseInt(id), name: name }));
+        
+        statusMsg.innerHTML = "⏳ សូមប្រាប់សិស្សឱ្យដាក់ម្រាមដៃលើម៉ាស៊ីន (២ ដង)...";
+        statusMsg.className = "status-message"; statusMsg.style.color = "#f39c12"; statusMsg.style.display = "block";
+        
+        document.getElementById("newId").value = ""; document.getElementById("newName").value = "";
+    }
+</script>
 </body>
 </html>
