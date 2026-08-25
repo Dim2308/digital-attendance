@@ -78,7 +78,7 @@
         if (savedName) document.getElementById("studentName").value = savedName;
     };
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzs5ciENnEGzfJSRSLg_8dm2hd6992SkgPGjWEKdPr1LyHrzjxKNUqSj7HJccliCBts/exec"; 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_3YrDPKdotjCAw5TTuK4Vb_6QT_mtV5mAn2QnIoqC93Ji6iqqOmRDOwYaBvYOIWm9Sg/exec"; 
     const urlParams = new URLSearchParams(window.location.search);
     const scanMethod = urlParams.get('method') || "Manual Link";
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
