@@ -90,7 +90,15 @@
         document.getElementById("clockDisplay").innerText = new Date().toLocaleTimeString('en-US', { hour12: true });
     }, 1000);
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzs5ciENnEGzfJSRSLg_8dm2hd6992SkgPGjWEKdPr1LyHrzjxKNUqSj7HJccliCBts/exec"; // 🔴 ត្រូវប្រាកដថាប្រើ Link ថ្មី
+    // 🟢 មុខងារថ្មី៖ ទាញយកឈ្មោះដែលបាន Save ទុកមកបង្ហាញស្វ័យប្រវត្តិ (Auto-fill សម្រាប់ NFC)
+    window.onload = function() {
+        var savedName = localStorage.getItem("myNpicName");
+        if (savedName) {
+            document.getElementById("studentName").value = savedName;
+        }
+    };
+
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzs5ciENnEGzfJSRSLg_8dm2hd6992SkgPGjWEKdPr1LyHrzjxKNUqSj7HJccliCBts/exec"; 
     const urlParams = new URLSearchParams(window.location.search);
     const scanMethod = urlParams.get('method') || "Manual Link";
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
@@ -135,10 +143,21 @@
                 statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាពៈ " + timeStatus;
                 statusMsg.className = "status-message success"; statusMsg.style.display = "block";
                 
+                // 🟢 មុខងារថ្មី៖ រក្សាទុកឈ្មោះក្នុងទូរស័ព្ទ (Browser) សម្រាប់ថ្ងៃស្អែក
+                localStorage.setItem("myNpicName", studentName);
+                
                 // បាញ់ MQTT ប្រាប់ ESP32 ជាទម្រង់ JSON
                 mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "checkin", name: studentName }));
-                document.getElementById("studentName").value = ""; document.getElementById("note").value = "";
-            } else {
+                
+                // លុបតែប្រអប់ចំណាំប៉ុណ្ណោះ ទុកឈ្មោះឱ្យនៅជាប់ដដែល
+                document.getElementById("note").value = "";
+            } 
+            // 🟢 មុខងារថ្មី៖ ចាប់យកកំហុសពេលស្កេនជាន់គ្នា (រួចរាល់ហើយ)
+            else if (data === "Already Scanned") {
+                statusMsg.innerHTML = "⚠️ អ្នកបានស្កេនវត្តមានរួចរាល់ហើយ សម្រាប់វេននេះ!";
+                statusMsg.className = "status-message"; statusMsg.style.color = "#f39c12"; statusMsg.style.display = "block";
+            }
+            else {
                 statusMsg.innerHTML = "❌ មានបញ្ហា " + data;
                 statusMsg.className = "status-message error"; statusMsg.style.display = "block";
             }
