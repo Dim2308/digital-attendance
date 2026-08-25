@@ -90,7 +90,7 @@
         document.getElementById("clockDisplay").innerText = new Date().toLocaleTimeString('en-US', { hour12: true });
     }, 1000);
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymDCQxCkhTSxebnjd5QfvneBB60WfLhmHy5LJEvVm_rZvvgAb8d68uYHevFQ8uwcMZUg/exec"; // 🔴 ត្រូវប្រាកដថាប្រើ Link ថ្មី
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbycM0A0ubSpADT3VDtgPDwWBJpkWUMHMehRHJX8A3jjfLPCB7d35KqRE7ngihTWBjc1ZQ/exec"; // 🔴 ត្រូវប្រាកដថាប្រើ Link ថ្មី
     const urlParams = new URLSearchParams(window.location.search);
     const scanMethod = urlParams.get('method') || "Manual Link";
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
