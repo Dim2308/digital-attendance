@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ផ្ទាំងគ្រប់គ្រងម៉ាស៊ីន (Admin)</title>
+    <link href="https://fonts.googleapis.com/css?family=Khmer+OS+Siemreap&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Khmer OS Siemreap', sans-serif; transition: 0.3s; }
+        body { background-color: #1a252c; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background-color: #ffffff; width: 100%; max-width: 400px; border-radius: 20px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); text-align: center; }
+        .title { color: #e67e22; font-weight: bold; font-size: 22px; margin: 5px 0 20px 0; }
+        .input-group { text-align: left; margin-bottom: 15px; }
+        .input-group label { display: block; color: #555; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; }
+        .btn-submit { color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px;}
+        .btn-enroll { background-color: #27ae60; }
+        .btn-delete { background-color: #e74c3c; }
+        .status-message { margin-top: 15px; font-size: 14px; font-weight: bold; display: none; }
+        .success { color: #27ae60; } .error { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 class="title">⚙️ ផ្ទាំងគ្រប់គ្រងប្រព័ន្ធ (Admin)</h2>
+    
+    <!-- 🟢 ផ្នែកចុះឈ្មោះ -->
+    <h3 style="color: #2f4e7d; font-size: 16px; text-align: left;">+ ចុះឈ្មោះសិស្សថ្មី</h3>
+    <div class="input-group">
+        <label>លេខរៀង ID ថ្មី (1 ដល់ 127)</label>
+        <input type="number" id="newId" placeholder="ឧទាហរណ៍៖ 22" min="1" max="127">
+    </div>
+    <div class="input-group">
+        <label>ឈ្មោះពេញ (Full Name)</label>
+        <input type="text" id="newName" placeholder="ឧទាហរណ៍៖ 22. NEW STUDENT">
+    </div>
+    <button class="btn-submit btn-enroll" onclick="startEnrollment()">ចាប់ផ្តើមចុះឈ្មោះក្រយៅដៃ</button>
+
+    <!-- 🔴 ផ្នែកលុបឈ្មោះ -->
+    <hr style="margin: 25px 0; border: 0.5px dashed #ccc;">
+    <h3 style="color: #e74c3c; font-size: 16px; text-align: left;">- លុបក្រយៅដៃសិស្ស</h3>
+    <div class="input-group">
+        <label>លេខរៀង ID ដែលចង់លុប</label>
+        <input type="number" id="deleteId" placeholder="ឧទាហរណ៍៖ 22" min="1" max="127">
+    </div>
+    <button class="btn-submit btn-delete" onclick="startDelete()">បញ្ជាលុបចេញពីម៉ាស៊ីន</button>
+
+    <div class="status-message" id="statusMessage"></div>
+</div>
+
+<script>
+    const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+    function startEnrollment() {
+        var id = document.getElementById("newId").value;
+        var name = document.getElementById("newName").value.trim();
+        var statusMsg = document.getElementById("statusMessage");
+
+        if (id === "" || name === "") {
+            statusMsg.innerHTML = "❌ សូមបំពេញលេខ ID និងឈ្មោះឱ្យបានត្រឹមត្រូវ!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
+        }
+
+        mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "enroll", id: parseInt(id), name: name }));
+        
+        statusMsg.innerHTML = "⏳ សូមប្រាប់សិស្សឱ្យដាក់ម្រាមដៃលើម៉ាស៊ីន (២ ដង)...";
+        statusMsg.className = "status-message"; statusMsg.style.color = "#f39c12"; statusMsg.style.display = "block";
+        
+        document.getElementById("newId").value = ""; document.getElementById("newName").value = "";
+    }
+
+    function startDelete() {
+        var id = document.getElementById("deleteId").value;
+        var statusMsg = document.getElementById("statusMessage");
+
+        if (id === "") {
+            statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលលេខ ID ដែលអ្នកចង់លុប!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
+        }
+
+        if(confirm("⚠️ តើអ្នកពិតជាចង់លុបក្រយៅដៃលេខ " + id + " ចេញពីម៉ាស៊ីនមែនទេ? សកម្មភាពនេះមិនអាចទាញត្រឡប់វិញបានទេ!")) {
+            mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "delete", id: parseInt(id) }));
+            
+            statusMsg.innerHTML = "🗑️ បានបញ្ជាឱ្យម៉ាស៊ីនលុបក្រយៅដៃលេខ " + id + " រួចរាល់!";
+            statusMsg.className = "status-message success"; statusMsg.style.display = "block";
+            
+            document.getElementById("deleteId").value = "";
+        }
+    }
+</script>
+</body>
+</html>
