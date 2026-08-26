@@ -13,8 +13,6 @@
         body.dark-mode { background-color: #121212; }
         body.dark-mode .card { background-color: #1e1e1e; color: #ffffff; }
         body.dark-mode .subtitle, body.dark-mode .title { color: #4facfe; }
-        
-        /* 🟢 ឱ្យ Mode ងងឹតស្គាល់ប្រអប់ Select ផងដែរ */
         body.dark-mode input, body.dark-mode select { background-color: #2c2c2c; color: white; border: 1px solid #444; }
         body.dark-mode label { color: #bbb; }
         
@@ -24,12 +22,14 @@
         .title { color: #2f4e7d; font-weight: bold; font-size: 22px; margin: 5px 0 10px 0; }
         .input-group { text-align: left; margin-bottom: 15px; }
         .input-group label { display: block; color: #555; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-        
-        /* 🟢 បន្ថែម select ចូលក្នុង CSS នេះ ដើម្បីឱ្យមានទំហំនិងរាងស្អាតដូច input ដែរ */
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; font-family: 'Khmer OS Siemreap', sans-serif; }
         select { cursor: pointer; background-color: white; }
         
-        .btn-submit { background-color: #2f4e7d; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        /* តម្រៀបប្រអប់ ឆ្នាំ និង ក្រុម ជាជួរដេក */
+        .row-group { display: flex; gap: 10px; }
+        .row-group .input-group { flex: 1; }
+        
+        .btn-submit { background-color: #2f4e7d; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-submit:disabled { background-color: #95a5a6; cursor: not-allowed; }
         .status-message { margin-top: 15px; font-size: 14px; font-weight: bold; display: none; }
         .success { color: #27ae60; } .error { color: #e74c3c; }
@@ -46,9 +46,32 @@
     <div class="realtime-clock" id="clockDisplay">00:00:00 AM</div>
     <div class="location-info" id="locInfo">📍 កំពុងឆែកទីតាំង...</div>
     
-    <!-- 🟢 ប្តូរពី input/datalist មកជា Select Dropdown សុទ្ធសាធ (សិស្សលែងអាចវាយអក្សរបាន) -->
+    <!-- 🟢 ថ្មី៖ ប្រអប់រើស ឆ្នាំសិក្សា និង ក្រុម -->
+    <div class="row-group">
+        <div class="input-group">
+            <label for="studentYear">ឆ្នាំសិក្សា (Year)</label>
+            <select id="studentYear" required>
+                <option value="" disabled selected>-- រើសឆ្នាំ --</option>
+                <option value="Year 1">ឆ្នាំទី ១</option>
+                <option value="Year 2">ឆ្នាំទី ២</option>
+                <option value="Year 3">ឆ្នាំទី ៣</option>
+                <option value="Year 4">ឆ្នាំទី ៤</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="studentGroup">ក្រុម (Group)</label>
+            <select id="studentGroup" required>
+                <option value="" disabled selected>-- រើសក្រុម --</option>
+                <option value="B.EcE.A">B.EcE.A</option>
+                <option value="B.EcE.B">B.EcE.B</option>
+                <option value="B.EcE.C">B.EcE.C</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- ប្រអប់រើស មុខវិជ្ជា -->
     <div class="input-group">
-        <label for="className">ថ្នាក់រៀន / មុខវិជ្ជា (Class / Subject)</label>
+        <label for="className">មុខវិជ្ជា (Subject)</label>
         <select id="className" required>
             <option value="" disabled selected>-- សូមចុចជ្រើសរើសមុខវិជ្ជា --</option>
             <option value="Control Engineering 2">Control Engineering 2</option>
@@ -98,22 +121,12 @@
         document.getElementById("clockDisplay").innerText = new Date().toLocaleTimeString('en-US', { hour12: true });
     }, 1000);
 
-    // 🟢 កែសម្រួលកូដ Auto-Save ឱ្យស្គាល់ប្រអប់ Select (Dropdown)
+    // Auto-Save ឱ្យចាំទាំង ៤ ជម្រើស
     window.onload = function() {
-        var savedName = localStorage.getItem("myNpicName");
-        var savedClass = localStorage.getItem("myNpicClass");
-        
-        if (savedName) document.getElementById("studentName").value = savedName;
-        
-        if (savedClass) {
-            var classDropdown = document.getElementById("className");
-            for(var i = 0; i < classDropdown.options.length; i++) {
-                if(classDropdown.options[i].value === savedClass) {
-                    classDropdown.selectedIndex = i;
-                    break;
-                }
-            }
-        }
+        if(localStorage.getItem("myNpicYear")) document.getElementById("studentYear").value = localStorage.getItem("myNpicYear");
+        if(localStorage.getItem("myNpicGroup")) document.getElementById("studentGroup").value = localStorage.getItem("myNpicGroup");
+        if(localStorage.getItem("myNpicClass")) document.getElementById("className").value = localStorage.getItem("myNpicClass");
+        if(localStorage.getItem("myNpicName")) document.getElementById("studentName").value = localStorage.getItem("myNpicName");
     };
 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec"; 
@@ -138,11 +151,13 @@
         var statusMsg = document.getElementById("statusMessage");
         var locInfo = document.getElementById("locInfo");
         
-        var className = document.getElementById("className").value.trim();
+        var year = document.getElementById("studentYear").value;
+        var group = document.getElementById("studentGroup").value;
+        var className = document.getElementById("className").value;
         var studentName = document.getElementById("studentName").value.trim();
         
-        if (className === "" || studentName === "") {
-            statusMsg.innerHTML = "❌ សូមជ្រើសរើសថ្នាក់រៀន និងឈ្មោះរបស់អ្នកជាមុនសិន!";
+        if (!year || !group || !className || studentName === "") {
+            statusMsg.innerHTML = "❌ សូមជ្រើសរើស ឆ្នាំ, ក្រុម, មុខវិជ្ជា និងឈ្មោះឱ្យបានគ្រប់គ្រាន់!";
             statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
         }
         
@@ -152,14 +167,11 @@
         
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {
-                var userLat = position.coords.latitude;
-                var userLng = position.coords.longitude;
-                var distance = getDistance(userLat, userLng, TARGET_LAT, TARGET_LNG);
-                
+                var distance = getDistance(position.coords.latitude, position.coords.longitude, TARGET_LAT, TARGET_LNG);
                 if (distance <= ALLOWED_RADIUS) {
                     locInfo.innerHTML = "✅ ទីតាំងត្រឹមត្រូវ (ចម្ងាយ: " + Math.round(distance) + "m)";
                     locInfo.style.color = "#27ae60";
-                    sendCheckIn(className, studentName);
+                    sendCheckIn(year, group, className, studentName);
                 } else {
                     locInfo.innerHTML = "❌ ទីតាំងមិនត្រឹមត្រូវ! (ចម្ងាយ: " + Math.round(distance) + "m)";
                     locInfo.style.color = "#e74c3c";
@@ -188,7 +200,7 @@
         return "ABSENT";
     }
 
-    function sendCheckIn(className, studentName) {
+    function sendCheckIn(year, group, className, studentName) {
         var note = document.getElementById("note").value;
         var btn = document.getElementById("submitBtn");
         var statusMsg = document.getElementById("statusMessage");
@@ -203,7 +215,8 @@
         
         fetch(GOOGLE_SCRIPT_URL, { 
             method: 'POST', 
-            body: JSON.stringify({ source: "webapp", class_name: className, name: studentName, time_status: timeStatus, note: note, method: scanMethod }) 
+            // 🟢 បន្ថែម year និង group បាញ់ទៅ Google Script
+            body: JSON.stringify({ source: "webapp", year: year, group: group, class_name: className, name: studentName, time_status: timeStatus, note: note, method: scanMethod }) 
         })
         .then(response => response.text())
         .then(data => {
@@ -211,8 +224,11 @@
                 statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាពៈ " + timeStatus;
                 statusMsg.className = "status-message success"; statusMsg.style.display = "block";
                 
-                localStorage.setItem("myNpicName", studentName);
+                // រក្សាទុកជម្រើសទាំងអស់
+                localStorage.setItem("myNpicYear", year);
+                localStorage.setItem("myNpicGroup", group);
                 localStorage.setItem("myNpicClass", className);
+                localStorage.setItem("myNpicName", studentName);
                 
                 mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "checkin", name: studentName }));
                 document.getElementById("note").value = "";
