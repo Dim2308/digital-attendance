@@ -13,21 +13,26 @@
         body.dark-mode { background-color: #121212; }
         body.dark-mode .card { background-color: #1e1e1e; color: #ffffff; }
         body.dark-mode .subtitle, body.dark-mode .title { color: #4facfe; }
-        body.dark-mode input { background-color: #2c2c2c; color: white; border: 1px solid #444; }
+        
+        /* 🟢 ឱ្យ Mode ងងឹតស្គាល់ប្រអប់ Select ផងដែរ */
+        body.dark-mode input, body.dark-mode select { background-color: #2c2c2c; color: white; border: 1px solid #444; }
         body.dark-mode label { color: #bbb; }
+        
         .theme-toggle { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer; }
         .realtime-clock { font-size: 28px; font-weight: bold; color: #e74c3c; margin: 10px 0; letter-spacing: 2px; }
         .subtitle { color: #2f4e7d; font-weight: bold; font-size: 14px; margin: 0; }
         .title { color: #2f4e7d; font-weight: bold; font-size: 22px; margin: 5px 0 10px 0; }
         .input-group { text-align: left; margin-bottom: 15px; }
         .input-group label { display: block; color: #555; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; }
+        
+        /* 🟢 បន្ថែម select ចូលក្នុង CSS នេះ ដើម្បីឱ្យមានទំហំនិងរាងស្អាតដូច input ដែរ */
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; font-family: 'Khmer OS Siemreap', sans-serif; }
+        select { cursor: pointer; background-color: white; }
+        
         .btn-submit { background-color: #2f4e7d; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-submit:disabled { background-color: #95a5a6; cursor: not-allowed; }
         .status-message { margin-top: 15px; font-size: 14px; font-weight: bold; display: none; }
         .success { color: #27ae60; } .error { color: #e74c3c; }
-        
-        /* ទីតាំងបច្ចុប្បន្ន */
         .location-info { font-size: 12px; color: #7f8c8d; margin-bottom: 15px; display: none; }
     </style>
 </head>
@@ -41,20 +46,20 @@
     <div class="realtime-clock" id="clockDisplay">00:00:00 AM</div>
     <div class="location-info" id="locInfo">📍 កំពុងឆែកទីតាំង...</div>
     
-    <!-- 🟢 បញ្ជីឈ្មោះមុខវិជ្ជាថ្មី (Update ពីរូបភាព) -->
+    <!-- 🟢 ប្តូរពី input/datalist មកជា Select Dropdown សុទ្ធសាធ (សិស្សលែងអាចវាយអក្សរបាន) -->
     <div class="input-group">
         <label for="className">ថ្នាក់រៀន / មុខវិជ្ជា (Class / Subject)</label>
-        <input list="classList" id="className" placeholder="ជ្រើសរើស ឬវាយឈ្មោះថ្នាក់ថ្មី..." required>
-        <datalist id="classList">
-            <option value="Control Engineering 2"></option>
-            <option value="Digital Power Electronics and Applications"></option>
-            <option value="Electric Vehicle System and Lab"></option>
-            <option value="Electronic Circuit Lab 2"></option>
-            <option value="Electronic Circuit Theory 2"></option>
-            <option value="Internet of Things (IoT)"></option>
-            <option value="PLC Systems 1"></option>
-            <option value="Power Electronics 2"></option>
-        </datalist>
+        <select id="className" required>
+            <option value="" disabled selected>-- សូមចុចជ្រើសរើសមុខវិជ្ជា --</option>
+            <option value="Control Engineering 2">Control Engineering 2</option>
+            <option value="Digital Power Electronics and Applications">Digital Power Electronics and Applications</option>
+            <option value="Electric Vehicle System and Lab">Electric Vehicle System and Lab</option>
+            <option value="Electronic Circuit Lab 2">Electronic Circuit Lab 2</option>
+            <option value="Electronic Circuit Theory 2">Electronic Circuit Theory 2</option>
+            <option value="Internet of Things (IoT)">Internet of Things (IoT)</option>
+            <option value="PLC Systems 1">PLC Systems 1</option>
+            <option value="Power Electronics 2">Power Electronics 2</option>
+        </select>
     </div>
     
     <div class="input-group">
@@ -93,12 +98,22 @@
         document.getElementById("clockDisplay").innerText = new Date().toLocaleTimeString('en-US', { hour12: true });
     }, 1000);
 
-    // បានបន្ថែមមុខងារចងចាំថ្នាក់រៀន
+    // 🟢 កែសម្រួលកូដ Auto-Save ឱ្យស្គាល់ប្រអប់ Select (Dropdown)
     window.onload = function() {
         var savedName = localStorage.getItem("myNpicName");
         var savedClass = localStorage.getItem("myNpicClass");
+        
         if (savedName) document.getElementById("studentName").value = savedName;
-        if (savedClass) document.getElementById("className").value = savedClass;
+        
+        if (savedClass) {
+            var classDropdown = document.getElementById("className");
+            for(var i = 0; i < classDropdown.options.length; i++) {
+                if(classDropdown.options[i].value === savedClass) {
+                    classDropdown.selectedIndex = i;
+                    break;
+                }
+            }
+        }
     };
 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec"; 
@@ -106,10 +121,9 @@
     const scanMethod = urlParams.get('method') || "QR Code";
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
-    // កំណត់ទីតាំងសាលា (NPIC)
     const TARGET_LAT = 11.597500;  
     const TARGET_LNG = 104.799556; 
-    const ALLOWED_RADIUS = 500;     // អនុញ្ញាតក្នុងរង្វង់ ៥០០ ម៉ែត្រ
+    const ALLOWED_RADIUS = 500;     
 
     function getDistance(lat1, lon1, lat2, lon2) {
         var R = 6371e3; 
@@ -145,7 +159,7 @@
                 if (distance <= ALLOWED_RADIUS) {
                     locInfo.innerHTML = "✅ ទីតាំងត្រឹមត្រូវ (ចម្ងាយ: " + Math.round(distance) + "m)";
                     locInfo.style.color = "#27ae60";
-                    sendCheckIn(className, studentName); // បញ្ជូនទាំងថ្នាក់រៀន និងឈ្មោះ
+                    sendCheckIn(className, studentName);
                 } else {
                     locInfo.innerHTML = "❌ ទីតាំងមិនត្រឹមត្រូវ! (ចម្ងាយ: " + Math.round(distance) + "m)";
                     locInfo.style.color = "#e74c3c";
@@ -189,7 +203,6 @@
         
         fetch(GOOGLE_SCRIPT_URL, { 
             method: 'POST', 
-            // 🟢 បានបញ្ជូនទិន្នន័យថ្នាក់រៀន (class_name) ទៅកាន់ Google Script
             body: JSON.stringify({ source: "webapp", class_name: className, name: studentName, time_status: timeStatus, note: note, method: scanMethod }) 
         })
         .then(response => response.text())
@@ -198,7 +211,6 @@
                 statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាពៈ " + timeStatus;
                 statusMsg.className = "status-message success"; statusMsg.style.display = "block";
                 
-                // រក្សាទុកទិន្នន័យពេលស្កេនជោគជ័យ
                 localStorage.setItem("myNpicName", studentName);
                 localStorage.setItem("myNpicClass", className);
                 
