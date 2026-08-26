@@ -27,7 +27,7 @@
         .status-message { margin-top: 15px; font-size: 14px; font-weight: bold; display: none; }
         .success { color: #27ae60; } .error { color: #e74c3c; }
         
-        /* ថ្មី៖ ទីតាំងបច្ចុប្បន្ន */
+        /* ទីតាំងបច្ចុប្បន្ន */
         .location-info { font-size: 12px; color: #7f8c8d; margin-bottom: 15px; display: none; }
     </style>
 </head>
@@ -40,6 +40,22 @@
     
     <div class="realtime-clock" id="clockDisplay">00:00:00 AM</div>
     <div class="location-info" id="locInfo">📍 កំពុងឆែកទីតាំង...</div>
+    
+    <!-- 🟢 បញ្ជីឈ្មោះមុខវិជ្ជាថ្មី (Update ពីរូបភាព) -->
+    <div class="input-group">
+        <label for="className">ថ្នាក់រៀន / មុខវិជ្ជា (Class / Subject)</label>
+        <input list="classList" id="className" placeholder="ជ្រើសរើស ឬវាយឈ្មោះថ្នាក់ថ្មី..." required>
+        <datalist id="classList">
+            <option value="Control Engineering 2"></option>
+            <option value="Digital Power Electronics and Applications"></option>
+            <option value="Electric Vehicle System and Lab"></option>
+            <option value="Electronic Circuit Lab 2"></option>
+            <option value="Electronic Circuit Theory 2"></option>
+            <option value="Internet of Things (IoT)"></option>
+            <option value="PLC Systems 1"></option>
+            <option value="Power Electronics 2"></option>
+        </datalist>
+    </div>
     
     <div class="input-group">
         <label for="studentName">លេខរៀង និងឈ្មោះ (ID & Name)</label>
@@ -77,35 +93,44 @@
         document.getElementById("clockDisplay").innerText = new Date().toLocaleTimeString('en-US', { hour12: true });
     }, 1000);
 
+    // បានបន្ថែមមុខងារចងចាំថ្នាក់រៀន
     window.onload = function() {
         var savedName = localStorage.getItem("myNpicName");
+        var savedClass = localStorage.getItem("myNpicClass");
         if (savedName) document.getElementById("studentName").value = savedName;
+        if (savedClass) document.getElementById("className").value = savedClass;
     };
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_3YrDPKdotjCAw5TTuK4Vb_6QT_mtV5mAn2QnIoqC93Ji6iqqOmRDOwYaBvYOIWm9Sg/exec"; 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec"; 
     const urlParams = new URLSearchParams(window.location.search);
     const scanMethod = urlParams.get('method') || "QR Code";
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
-    // ================== 🟢 កំណត់ទីតាំងសាលា (NPIC) ==================
-    const TARGET_LAT = 11.597500;  // 📍 លេខ Latitude ដែលបំប្លែងរួច
-    const TARGET_LNG = 104.799556; // 📍 លេខ Longitude ដែលបំប្លែងរួច
-    const ALLOWED_RADIUS = 500;     // អនុញ្ញាតឱ្យស្កេនក្នុងរង្វង់ ៥០ ម៉ែត្រ
+    // កំណត់ទីតាំងសាលា (NPIC)
+    const TARGET_LAT = 11.597500;  
+    const TARGET_LNG = 104.799556; 
+    const ALLOWED_RADIUS = 500;     // អនុញ្ញាតក្នុងរង្វង់ ៥០០ ម៉ែត្រ
 
-    // អនុគមន៍គណនាចម្ងាយ (គិតជាម៉ែត្រ)
     function getDistance(lat1, lon1, lat2, lon2) {
-        var R = 6371e3; // កាំផែនដី
+        var R = 6371e3; 
         var φ1 = lat1 * Math.PI/180; var φ2 = lat2 * Math.PI/180;
         var Δφ = (lat2-lat1) * Math.PI/180; var Δλ = (lon2-lon1) * Math.PI/180;
         var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
         var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c; // ចម្ងាយជាម៉ែត្រ
+        return R * c; 
     }
 
-    // ឆែកទីតាំងមុននឹងបញ្ជូនទិន្នន័យ
     function verifyLocationThenCheckIn() {
         var statusMsg = document.getElementById("statusMessage");
         var locInfo = document.getElementById("locInfo");
+        
+        var className = document.getElementById("className").value.trim();
+        var studentName = document.getElementById("studentName").value.trim();
+        
+        if (className === "" || studentName === "") {
+            statusMsg.innerHTML = "❌ សូមជ្រើសរើសថ្នាក់រៀន និងឈ្មោះរបស់អ្នកជាមុនសិន!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
+        }
         
         statusMsg.style.display = "none";
         locInfo.style.display = "block";
@@ -120,7 +145,7 @@
                 if (distance <= ALLOWED_RADIUS) {
                     locInfo.innerHTML = "✅ ទីតាំងត្រឹមត្រូវ (ចម្ងាយ: " + Math.round(distance) + "m)";
                     locInfo.style.color = "#27ae60";
-                    sendCheckIn(); // បន្តទៅស្កេនវត្តមាន
+                    sendCheckIn(className, studentName); // បញ្ជូនទាំងថ្នាក់រៀន និងឈ្មោះ
                 } else {
                     locInfo.innerHTML = "❌ ទីតាំងមិនត្រឹមត្រូវ! (ចម្ងាយ: " + Math.round(distance) + "m)";
                     locInfo.style.color = "#e74c3c";
@@ -149,16 +174,10 @@
         return "ABSENT";
     }
 
-    function sendCheckIn() {
-        var studentName = document.getElementById("studentName").value.trim();
+    function sendCheckIn(className, studentName) {
         var note = document.getElementById("note").value;
         var btn = document.getElementById("submitBtn");
         var statusMsg = document.getElementById("statusMessage");
-
-        if (studentName === "") {
-            statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលលេខរៀង ឬឈ្មោះរបស់អ្នក!";
-            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
-        }
 
         var timeStatus = checkTimeStatus();
         if (timeStatus === "ABSENT") {
@@ -170,14 +189,19 @@
         
         fetch(GOOGLE_SCRIPT_URL, { 
             method: 'POST', 
-            body: JSON.stringify({ source: "webapp", name: studentName, time_status: timeStatus, note: note, method: scanMethod }) 
+            // 🟢 បានបញ្ជូនទិន្នន័យថ្នាក់រៀន (class_name) ទៅកាន់ Google Script
+            body: JSON.stringify({ source: "webapp", class_name: className, name: studentName, time_status: timeStatus, note: note, method: scanMethod }) 
         })
         .then(response => response.text())
         .then(data => {
             if (data === "Success") {
                 statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាពៈ " + timeStatus;
                 statusMsg.className = "status-message success"; statusMsg.style.display = "block";
+                
+                // រក្សាទុកទិន្នន័យពេលស្កេនជោគជ័យ
                 localStorage.setItem("myNpicName", studentName);
+                localStorage.setItem("myNpicClass", className);
+                
                 mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "checkin", name: studentName }));
                 document.getElementById("note").value = "";
             } 
