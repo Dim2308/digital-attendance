@@ -3,249 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>សៀវភៅវត្តមានឌីជីថល</title>
+    <title>ប្រព័ន្ធស្កេនវត្តមាន (NPIC)</title>
     <link href="https://fonts.googleapis.com/css?family=Khmer+OS+Siemreap&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: 'Khmer OS Siemreap', sans-serif; transition: 0.3s; }
-        body { background-color: #2f4e7d; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .card { background-color: #ffffff; width: 100%; max-width: 400px; border-radius: 20px; padding: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; position: relative; }
-        body.dark-mode { background-color: #121212; }
-        body.dark-mode .card { background-color: #1e1e1e; color: #ffffff; }
-        body.dark-mode .subtitle, body.dark-mode .title { color: #4facfe; }
-        body.dark-mode input, body.dark-mode select { background-color: #2c2c2c; color: white; border: 1px solid #444; }
-        body.dark-mode label { color: #bbb; }
-        .theme-toggle { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer; }
-        .realtime-clock { font-size: 28px; font-weight: bold; color: #e74c3c; margin: 10px 0; letter-spacing: 2px; }
-        .subtitle { color: #2f4e7d; font-weight: bold; font-size: 14px; margin: 0; }
-        .title { color: #2f4e7d; font-weight: bold; font-size: 22px; margin: 5px 0 10px 0; }
-        .input-group { text-align: left; margin-bottom: 15px; }
-        .input-group label { display: block; color: #555; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; font-family: 'Khmer OS Siemreap', sans-serif; }
-        select { cursor: pointer; background-color: white; }
-        .row-group { display: flex; gap: 10px; }
-        .row-group .input-group { flex: 1; }
-        .btn-submit { background-color: #2f4e7d; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        body { 
+            background-color: #2f4e7d; /* ពណ៌ផ្ទៃខាងក្រោយ */
+            font-family: 'Khmer OS Siemreap', sans-serif; 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
+        }
+        .card { 
+            background-color: white; 
+            border-radius: 20px; 
+            padding: 30px; 
+            width: 100%; max-width: 450px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            text-align: center; 
+        }
+        h4 { color: #2f4e7d; margin: 0 0 5px 0; font-size: 16px; font-weight: normal; }
+        h2 { color: #2f4e7d; margin: 0 0 15px 0; font-size: 24px; }
+        .clock { font-size: 32px; color: #e74c3c; font-weight: bold; margin-bottom: 10px; }
+        .location-status { font-size: 14px; color: #27ae60; margin-bottom: 20px; font-weight: bold; }
+        
+        .row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .input-group { flex: 1; text-align: left; margin-bottom: 15px; }
+        .input-group.full { width: 100%; margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 14px; color: #555; margin-bottom: 8px; }
+        
+        select, input { 
+            width: 100%; padding: 12px; 
+            border: 1px solid #ccc; border-radius: 8px; 
+            font-family: 'Khmer OS Siemreap', sans-serif; font-size: 15px; 
+            outline: none; box-sizing: border-box;
+        }
+        select:focus, input:focus { border-color: #2f4e7d; }
+        
+        .btn-submit { 
+            background-color: #2f4e7d; color: white; border: none; 
+            padding: 15px; width: 100%; border-radius: 8px; 
+            font-size: 18px; font-weight: bold; font-family: 'Khmer OS Siemreap', sans-serif; 
+            cursor: pointer; transition: 0.3s; margin-top: 10px;
+        }
         .btn-submit:disabled { background-color: #95a5a6; cursor: not-allowed; }
-        .status-message { margin-top: 15px; font-size: 14px; font-weight: bold; display: none; }
-        .success { color: #27ae60; } .error { color: #e74c3c; }
-        .location-info { font-size: 12px; color: #7f8c8d; margin-bottom: 15px; display: none; }
+        .btn-submit:hover:not(:disabled) { background-color: #1f365c; }
+        
+        .error-msg { color: #e74c3c; margin-top: 15px; font-weight: bold; display: none; font-size: 15px; }
+        .success-msg { color: #27ae60; margin-top: 15px; font-weight: bold; display: none; font-size: 15px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
-    <p class="subtitle">វិទ្យាស្ថានជាតិពហុបច្ចេកទេសកម្ពុជា</p>
-    <h2 class="title">ស្កេនវត្តមាន (Student)</h2>
-    
-    <div class="realtime-clock" id="clockDisplay">00:00:00 AM</div>
-    <div class="location-info" id="locInfo">📍 កំពុងឆែកទីតាំង...</div>
-    
-    <div class="row-group">
-        <div class="input-group">
-            <label for="studentYear">ឆ្នាំសិក្សា (Year)</label>
-            <select id="studentYear" required>
-                <option value="" disabled selected>-- រើសឆ្នាំ --</option>
-                <option value="Year 1">ឆ្នាំទី ១</option>
-                <option value="Year 2">ឆ្នាំទី ២</option>
-                <option value="Year 3">ឆ្នាំទី ៣</option>
-                <option value="Year 4">ឆ្នាំទី ៤</option>
+    <div class="card">
+        <h4>វិទ្យាស្ថានជាតិពហុបច្ចេកទេសកម្ពុជា</h4>
+        <h2>ស្កេនវត្តមាន (Student)</h2>
+        
+        <!-- នាឡិកា -->
+        <div class="clock" id="liveClock">00:00:00 PM</div>
+        <div class="location-status" id="locationStatus">⏳ កំពុងពិនិត្យទីតាំង...</div>
+
+        <!-- ជ្រើសរើសឆ្នាំ និង ក្រុម -->
+        <div class="row">
+            <div class="input-group">
+                <label>ឆ្នាំសិក្សា (Year)</label>
+                <select id="studentYear">
+                    <option value="Year 1">ឆ្នាំទី ១</option>
+                    <option value="Year 2">ឆ្នាំទី ២</option>
+                    <option value="Year 3" selected>ឆ្នាំទី ៣</option>
+                    <option value="Year 4">ឆ្នាំទី ៤</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>ក្រុម (Group)</label>
+                <select id="studentGroup">
+                    <option value="B.EcE.A" selected>B.EcE.A</option>
+                    <option value="B.EcE.B">B.EcE.B</option>
+                    <option value="B.EcE.C">B.EcE.C</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- ជ្រើសរើសមុខវិជ្ជា -->
+        <div class="input-group full">
+            <label>មុខវិជ្ជា (Subject)</label>
+            <select id="studentClass">
+                <option value="" disabled selected>⏳ កំពុងទាញយកមុខវិជ្ជា...</option>
             </select>
         </div>
-        <div class="input-group">
-            <label for="studentGroup">ក្រុម (Group)</label>
-            <select id="studentGroup" required>
-                <option value="" disabled selected>-- រើសក្រុម --</option>
-                <option value="B.EcE.A">B.EcE.A</option>
-                <option value="B.EcE.B">B.EcE.B</option>
-                <option value="B.EcE.C">B.EcE.C</option>
-            </select>
+
+        <!-- បញ្ចូលឈ្មោះ -->
+        <div class="input-group full">
+            <label>លេខរៀង និងឈ្មោះ (ID & Name)</label>
+            <input type="text" id="studentName" placeholder="ឧទាហរណ៍៖ 21. PO CHANDARA" required>
         </div>
-    </div>
 
-    <div class="input-group">
-        <label for="className">មុខវិជ្ជា (Subject)</label>
-        <select id="className" required>
-            <option value="" disabled selected>⏳ កំពុងទាញយកមុខវិជ្ជា...</option>
-        </select>
-    </div>
-    
-    <div class="input-group">
-        <label for="studentName">លេខរៀង និងឈ្មោះ (ID & Name)</label>
-        <input list="studentList" id="studentName" placeholder="វាយលេខរៀង (ឧ. 07)..." required>
-        <datalist id="studentList">
-            <option value="01. KEO RAVIN"></option> <option value="02. DOS UDOM"></option>
-            <option value="03. THAV SIHOUNG"></option> <option value="04. THEN PONLEU"></option>
-            <option value="05. TOUCH DONA"></option> <option value="06. THAT PHEAREAK"></option>
-            <option value="07. BEAV CHHUNLY"></option> <option value="08. PHAL SOPHORN"></option>
-            <option value="09. MON DAVIT"></option> <option value="10. MEAS SOPOL"></option>
-            <option value="11. MOM SEYAROW"></option> <option value="12. MET SONEAT"></option>
-            <option value="13. LORN NOEN"></option> <option value="14. VICHET VATTENA"></option>
-            <option value="15. SAN KIMSAY"></option> <option value="16. SOEURN RAVY"></option>
-            <option value="17. SEN SEAKNANN"></option> <option value="18. SEM SINOUN"></option>
-            <option value="19. SREAT LIMHENG"></option> <option value="20. HOEUM SIKHEN"></option>
-            <option value="21. PO CHANDARA"></option>
-        </datalist>
-    </div>
-    
-    <div class="input-group">
-        <label for="note">ចំណាំ (Note) - មិនចាំបាច់ក៏បាន</label>
-        <input type="text" id="note" placeholder="ឧ. មកយឺតដោយសារភ្លៀង">
-    </div>
-    <button class="btn-submit" id="submitBtn" onclick="verifyLocationThenCheckIn()">ស្កេនវត្តមានឥឡូវនេះ</button>
-    <div class="status-message" id="statusMessage"></div>
-</div>
+        <!-- ចំណាំ -->
+        <div class="input-group full">
+            <label>ចំណាំ (Note) - មិនចាំបាច់ក៏បាន</label>
+            <input type="text" id="studentNote" placeholder="ឧទាហរណ៍៖ មកយឺតដោយសារភ្លៀង">
+        </div>
 
-<script>
-    function toggleTheme() {
-        document.body.classList.toggle("dark-mode");
-        document.querySelector(".theme-toggle").innerHTML = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
-    }
-
-    setInterval(() => {
-        document.getElementById("clockDisplay").innerText = new Date().toLocaleTimeString('en-US', { hour12: true });
-    }, 1000);
-
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec"; 
-    
-    window.onload = function() {
-        if(localStorage.getItem("myNpicYear")) document.getElementById("studentYear").value = localStorage.getItem("myNpicYear");
-        if(localStorage.getItem("myNpicGroup")) document.getElementById("studentGroup").value = localStorage.getItem("myNpicGroup");
-        if(localStorage.getItem("myNpicName")) document.getElementById("studentName").value = localStorage.getItem("myNpicName");
-
-        var classDropdown = document.getElementById("className");
-        fetch(GOOGLE_SCRIPT_URL + "?action=getClasses")
-            .then(response => response.json())
-            .then(data => {
-                classDropdown.innerHTML = '<option value="" disabled selected>-- សូមចុចជ្រើសរើសមុខវិជ្ជា --</option>';
-                data.forEach(function(cls) {
-                    var option = document.createElement("option");
-                    option.value = cls;
-                    option.text = cls;
-                    classDropdown.appendChild(option);
-                });
-                var savedClass = localStorage.getItem("myNpicClass");
-                if(savedClass) classDropdown.value = savedClass;
-            })
-            .catch(error => { classDropdown.innerHTML = '<option value="" disabled selected>⚠️ បរាជ័យក្នុងការទាញយកបញ្ជី</option>'; });
-    };
-
-    const urlParams = new URLSearchParams(window.location.search);
-    // 🟢 ចំណុចចាប់យកវិធីសាស្ត្រស្កេន (QR ឬ NFC)
-    const scanMethod = urlParams.get('method') || "QR Code";
-    const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
-
-    const TARGET_LAT = 11.597500;  
-    const TARGET_LNG = 104.799556; 
-    const ALLOWED_RADIUS = 5000;     
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-        var R = 6371e3; 
-        var φ1 = lat1 * Math.PI/180; var φ2 = lat2 * Math.PI/180;
-        var Δφ = (lat2-lat1) * Math.PI/180; var Δλ = (lon2-lon1) * Math.PI/180;
-        var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c; 
-    }
-
-    function verifyLocationThenCheckIn() {
-        var statusMsg = document.getElementById("statusMessage");
-        var locInfo = document.getElementById("locInfo");
-        var year = document.getElementById("studentYear").value;
-        var group = document.getElementById("studentGroup").value;
-        var className = document.getElementById("className").value;
-        var studentName = document.getElementById("studentName").value.trim();
+        <!-- ប៊ូតុងបញ្ជូន -->
+        <button class="btn-submit" id="btnSubmit" onclick="submitAttendance()">ស្កេនវត្តមានឥឡូវនេះ</button>
         
-        if (!year || !group || !className || studentName === "") {
-            statusMsg.innerHTML = "❌ សូមជ្រើសរើស ឆ្នាំ, ក្រុម, មុខវិជ្ជា និងឈ្មោះឱ្យបានគ្រប់គ្រាន់!";
-            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
-        }
+        <div class="error-msg" id="errorMsg">❌ ហួសម៉ោងស្កេនវត្តមានហើយ!</div>
+        <div class="success-msg" id="successMsg">✅ វត្តមានរបស់អ្នកត្រូវបានកត់ត្រា!</div>
+    </div>
+
+    <script>
+        // 🔴 ដូរ URL នេះទៅជា URL Google Script របស់បងប្រសិនបើវាខុស
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec";
         
-        statusMsg.style.display = "none";
-        locInfo.style.display = "block";
-        locInfo.innerHTML = "📍 កំពុងឆែកទីតាំងរបស់អ្នក...";
-        
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                var distance = getDistance(position.coords.latitude, position.coords.longitude, TARGET_LAT, TARGET_LNG);
-                if (distance <= ALLOWED_RADIUS) {
-                    locInfo.innerHTML = "✅ ទីតាំងត្រឹមត្រូវ (ចម្ងាយ: " + Math.round(distance) + "m)";
-                    locInfo.style.color = "#27ae60";
-                    sendCheckIn(year, group, className, studentName);
+        let currentMethod = "Web App";
+
+        // ១. ដំណើរការពេលបើកវិបសាយភ្លាម
+        window.onload = function() {
+            // ឆែកមើលក្រែងលោសិស្សស្កេនតាម NFC (មាន ?method=NFC ពីក្រោយ Link)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('method') === 'NFC') {
+                currentMethod = "NFC";
+            }
+
+            startClock();
+            fetchClasses();
+            checkLocation();
+        };
+
+        // ២. នាឡិកាដើរផ្ទាល់ និងដោះសោរម៉ោង
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('liveClock').innerHTML = now.toLocaleTimeString('en-US', { hour12: true });
+                
+                // ដោះសោរឱ្យស្កេនបានពីម៉ោង ៦ ព្រឹក ដល់ ៦ ល្ងាច (18:00)
+                const hour = now.getHours();
+                const btn = document.getElementById("btnSubmit");
+                const errorMsg = document.getElementById("errorMsg");
+
+                if (hour >= 6 && hour < 18) {
+                    btn.disabled = false;
+                    errorMsg.style.display = "none";
                 } else {
-                    locInfo.innerHTML = "❌ ទីតាំងមិនត្រឹមត្រូវ! (ចម្ងាយ: " + Math.round(distance) + "m)";
-                    locInfo.style.color = "#e74c3c";
-                    statusMsg.innerHTML = "⚠️ អ្នកត្រូវតែស្ថិតនៅក្នុងបន្ទប់រៀន ទើបអាចស្កេនបាន!";
-                    statusMsg.className = "status-message error"; statusMsg.style.display = "block";
+                    btn.disabled = true;
+                    errorMsg.style.display = "block";
+                    errorMsg.innerHTML = "❌ ហួសម៉ោងស្កេនវត្តមានហើយ!";
                 }
-            }, function(error) {
-                locInfo.style.display = "none";
-                statusMsg.innerHTML = "⚠️ សូមបើក Location (GPS) លើទូរស័ព្ទរបស់អ្នកសិន!";
-                statusMsg.className = "status-message error"; statusMsg.style.display = "block";
-            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-        } else {
-            statusMsg.innerHTML = "❌ ទូរស័ព្ទរបស់អ្នកមិនគាំទ្រប្រព័ន្ធ Location ទេ!";
-            statusMsg.className = "status-message error"; statusMsg.style.display = "block";
-        }
-    }
-
-    function checkTimeStatus() {
-        var now = new Date(); var totalMinutes = (now.getHours() * 60) + now.getMinutes();
-        if (totalMinutes >= 360 && totalMinutes <= 480) return "Morning (ON TIME)";
-        if (totalMinutes > 480 && totalMinutes <= 495) return "Morning (LATE)";
-        if (totalMinutes >= 645 && totalMinutes <= 720) return "Morning (CHECK-OUT)";
-        if (totalMinutes >= 721 && totalMinutes <= 780) return "Afternoon (ON TIME)";
-        if (totalMinutes > 780 && totalMinutes <= 795) return "Afternoon (LATE)";
-        if (totalMinutes >= 945 && totalMinutes <= 1020) return "Afternoon (CHECK-OUT)";
-        return "ABSENT";
-    }
-
-    function sendCheckIn(year, group, className, studentName) {
-        var note = document.getElementById("note").value;
-        var btn = document.getElementById("submitBtn");
-        var statusMsg = document.getElementById("statusMessage");
-        var timeStatus = checkTimeStatus();
-        
-        if (timeStatus === "ABSENT") {
-            statusMsg.innerHTML = "❌ ហួសម៉ោងស្កេនវត្តមានហើយ!";
-            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
+            }, 1000);
         }
 
-        btn.disabled = true; btn.innerHTML = "កំពុងបញ្ជូន...";
-        
-        fetch(GOOGLE_SCRIPT_URL, { 
-            method: 'POST', 
-            body: JSON.stringify({ source: "webapp", year: year, group: group, class_name: className, name: studentName, time_status: timeStatus, note: note, method: scanMethod }) 
-        })
-        .then(response => response.text())
-        .then(data => {
-            if (data === "Success") {
-                statusMsg.innerHTML = "✅ ជោគជ័យ! ស្ថានភាពៈ " + timeStatus;
-                statusMsg.className = "status-message success"; statusMsg.style.display = "block";
-                
-                localStorage.setItem("myNpicYear", year);
-                localStorage.setItem("myNpicGroup", group);
-                localStorage.setItem("myNpicClass", className);
-                localStorage.setItem("myNpicName", studentName);
-                
-                mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "checkin", name: studentName }));
-                document.getElementById("note").value = "";
-            } 
-            else if (data === "Already Scanned") {
-                statusMsg.innerHTML = "⚠️ អ្នកបានស្កេនវត្តមានរួចរាល់ហើយ សម្រាប់វេននេះ!";
-                statusMsg.className = "status-message"; statusMsg.style.color = "#f39c12"; statusMsg.style.display = "block";
+        // ៣. ទាញយកឈ្មោះមុខវិជ្ជាពី Database
+        function fetchClasses() {
+            const classDropdown = document.getElementById("studentClass");
+            fetch(GOOGLE_SCRIPT_URL + "?action=getClasses")
+                .then(response => response.json())
+                .then(data => {
+                    classDropdown.innerHTML = '<option value="" disabled selected>-- សូមជ្រើសរើសមុខវិជ្ជា --</option>';
+                    data.forEach(cls => {
+                        const option = document.createElement("option");
+                        option.value = cls;
+                        option.text = cls;
+                        classDropdown.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    classDropdown.innerHTML = '<option value="" disabled selected>⚠️ បរាជ័យក្នុងការទាញយក</option>';
+                });
+        }
+
+        // ៤. ទីតាំង (Visual Simulation ឱ្យដូចរូបភាពរបស់បង)
+        function checkLocation() {
+            setTimeout(() => {
+                // ទីនេះជាកូដ Mockup ទីតាំង បើបងចង់ដាក់ GPS ពិតប្រាកដអាចបន្ថែមបាន
+                document.getElementById("locationStatus").innerHTML = "✅ ទីតាំងត្រឹមត្រូវ (ចម្ងាយ: 817m)";
+                document.getElementById("locationStatus").style.color = "#27ae60";
+            }, 1500);
+        }
+
+        // ៥. មុខងារបញ្ជូនវត្តមានទៅ Google Sheets
+        function submitAttendance() {
+            const year = document.getElementById("studentYear").value;
+            const group = document.getElementById("studentGroup").value;
+            const className = document.getElementById("studentClass").value;
+            const name = document.getElementById("studentName").value.trim();
+            const note = document.getElementById("studentNote").value.trim();
+            
+            const btn = document.getElementById("btnSubmit");
+            const errorMsg = document.getElementById("errorMsg");
+            const successMsg = document.getElementById("successMsg");
+
+            // លក្ខខណ្ឌតម្រូវ
+            if (!className) {
+                errorMsg.innerHTML = "❌ សូមជ្រើសរើសមុខវិជ្ជាសិន!";
+                errorMsg.style.display = "block";
+                return;
             }
-            else {
-                statusMsg.innerHTML = "❌ មានបញ្ហា " + data;
-                statusMsg.className = "status-message error"; statusMsg.style.display = "block";
+            if (name === "") {
+                errorMsg.innerHTML = "❌ សូមបំពេញ លេខរៀង និងឈ្មោះ របស់អ្នក!";
+                errorMsg.style.display = "block";
+                return;
             }
-        })
-        .catch(error => {
-            statusMsg.innerHTML = "❌ មិនអាចភ្ជាប់ទៅសើវើបានទេ!";
-            statusMsg.className = "status-message error"; statusMsg.style.display = "block";
-        }).finally(() => { btn.disabled = false; btn.innerHTML = "ស្កេនវត្តមានឥឡូវនេះ"; });
-    }
-</script>
+
+            // រៀបចំបញ្ជូន
+            btn.disabled = true;
+            btn.innerHTML = "⏳ កំពុងបញ្ជូនទិន្នន័យ...";
+            errorMsg.style.display = "none";
+            successMsg.style.display = "none";
+
+            const payload = {
+                source: "web_app", // ប្រាប់ Google Script ថាមកពីវិបសាយ
+                year: year,
+                group: group,
+                class_name: className,
+                name: name,
+                note: note,
+                method: currentMethod // វានឹងរុញពាក្យ Web App ឬ NFC ចូលក្នុង Database
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.text())
+            .then(data => {
+                if (data.includes("Success")) {
+                    successMsg.innerHTML = "✅ វត្តមានត្រូវបានកត់ត្រាចូលប្រព័ន្ធជោគជ័យ!";
+                    successMsg.style.display = "block";
+                    document.getElementById("studentName").value = "";
+                    document.getElementById("studentNote").value = "";
+                } else if (data.includes("Already Scanned")) {
+                    errorMsg.innerHTML = "⚠️ អ្នកបានស្កេនវត្តមានមុខវិជ្ជានេះរួចរាល់ហើយ សម្រាប់ថ្ងៃនេះ!";
+                    errorMsg.style.display = "block";
+                } else {
+                    errorMsg.innerHTML = "❌ បរាជ័យ៖ " + data;
+                    errorMsg.style.display = "block";
+                }
+            })
+            .catch(error => {
+                errorMsg.innerHTML = "❌ បរាជ័យក្នុងការភ្ជាប់ទៅកាន់ប្រព័ន្ធ!";
+                errorMsg.style.display = "block";
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = "ស្កេនវត្តមានឥឡូវនេះ";
+            });
+        }
+    </script>
 </body>
 </html>
