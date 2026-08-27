@@ -103,9 +103,9 @@
         </div>
 
         <!-- ប៊ូតុងបញ្ជូន -->
-        <button class="btn-submit" id="btnSubmit" onclick="submitAttendance()">ស្កេនវត្តមានឥឡូវនេះ</button>
+        <button class="btn-submit" id="btnSubmit" onclick="submitAttendance()" disabled>ស្កេនវត្តមានឥឡូវនេះ</button>
         
-        <div class="error-msg" id="errorMsg">❌ ហួសម៉ោងស្កេនវត្តមានហើយ!</div>
+        <div class="error-msg" id="errorMsg">⏳ កំពុងពិនិត្យទីតាំង GPS...</div>
         <div class="success-msg" id="successMsg">✅ វត្តមានរបស់អ្នកត្រូវបានកត់ត្រា!</div>
     </div>
 
@@ -114,6 +114,12 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec";
         
         let currentMethod = "Web App";
+        let isLocationValid = false; // តេស្ត GPS ថាត្រូវឬអត់
+
+        // កូអរដោនេ សាលា NPIC ពិតប្រាកដ (Latitude & Longitude)
+        const NPIC_LAT = 11.5780; 
+        const NPIC_LNG = 104.8112; 
+        const MAX_DISTANCE_KM = 5.0; // កំណត់ ៥ គីឡូម៉ែត្រ
 
         // ១. ដំណើរការពេលបើកវិបសាយភ្លាម
         window.onload = function() {
@@ -123,25 +129,75 @@
                 currentMethod = "NFC";
             }
 
-            startClock();
             fetchClasses();
-            checkLocation();
+            checkLocation(); // ឆែក GPS មុនគេ
+            startClock();    // បន្ទាប់មកទើបឱ្យនាឡិកាដើរ
         };
 
-        // ២. នាឡិកាដើរផ្ទាល់ និងដោះសោរម៉ោង
+        // ២. មុខងារឆែក GPS ពិតប្រាកដ (Real Geolocation)
+        function checkLocation() {
+            const statusEl = document.getElementById("locationStatus");
+            statusEl.innerHTML = "⏳ កំពុងទាញយកទីតាំង GPS របស់អ្នក...";
+            statusEl.style.color = "#f39c12";
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude;
+                        const userLng = position.coords.longitude;
+                        
+                        // រូបមន្ត Haversine គណនាចម្ងាយពិតពីទូរស័ព្ទទៅសាលា NPIC
+                        const R = 6371; 
+                        const dLat = (userLat - NPIC_LAT) * Math.PI / 180;
+                        const dLng = (userLng - NPIC_LNG) * Math.PI / 180;
+                        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                                  Math.cos(NPIC_LAT * Math.PI / 180) * Math.cos(userLat * Math.PI / 180) *
+                                  Math.sin(dLng/2) * Math.sin(dLng/2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                        const distance = R * c; 
+
+                        if (distance <= MAX_DISTANCE_KM) {
+                            statusEl.innerHTML = `✅ ទីតាំងត្រឹមត្រូវ (ចម្ងាយ: ${distance.toFixed(2)}Km)`;
+                            statusEl.style.color = "#27ae60";
+                            isLocationValid = true;
+                        } else {
+                            statusEl.innerHTML = `❌ អ្នកនៅក្រៅសាលា (ចម្ងាយ: ${distance.toFixed(2)}Km)`;
+                            statusEl.style.color = "#e74c3c";
+                            isLocationValid = false;
+                        }
+                    },
+                    (error) => {
+                        statusEl.innerHTML = "⚠️ សូមបើក GPS (Location) លើទូរស័ព្ទ រួច Refresh ឡើងវិញ!";
+                        statusEl.style.color = "#e74c3c";
+                        isLocationValid = false;
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                statusEl.innerHTML = "⚠️ ទូរស័ព្ទរបស់អ្នកមិនគាំទ្រប្រព័ន្ធ GPS ទេ!";
+                statusEl.style.color = "#e74c3c";
+                isLocationValid = false;
+            }
+        }
+
+        // ៣. នាឡិកាដើរផ្ទាល់ និងដោះសោរតាមម៉ោង + ទីតាំង
         function startClock() {
             setInterval(() => {
                 const now = new Date();
                 document.getElementById('liveClock').innerHTML = now.toLocaleTimeString('en-US', { hour12: true });
                 
-                // ដោះសោរឱ្យស្កេនបានពីម៉ោង ៦ ព្រឹក ដល់ ៦ ល្ងាច (18:00)
                 const hour = now.getHours();
                 const btn = document.getElementById("btnSubmit");
                 const errorMsg = document.getElementById("errorMsg");
 
-                if (hour >= 6 && hour < 18) {
+                // លក្ខខណ្ឌតឹងរ៉ឹង៖ ត្រូវតែស្ថិតក្នុងម៉ោង (៦ព្រឹក-៦ល្ងាច) **និង** នៅក្បែរសាលា (ក្នុងរង្វង់ 5Km)
+                if (hour >= 6 && hour < 18 && isLocationValid) {
                     btn.disabled = false;
                     errorMsg.style.display = "none";
+                } else if (!isLocationValid) {
+                    btn.disabled = true;
+                    errorMsg.style.display = "block";
+                    errorMsg.innerHTML = "❌ បរាជ័យ៖ អ្នកត្រូវតែនៅជិតសាលា (ក្នុងរង្វង់ ៥ គីឡូម៉ែត្រ)!";
                 } else {
                     btn.disabled = true;
                     errorMsg.style.display = "block";
@@ -150,7 +206,7 @@
             }, 1000);
         }
 
-        // ៣. ទាញយកឈ្មោះមុខវិជ្ជាពី Database
+        // ៤. ទាញយកឈ្មោះមុខវិជ្ជាពី Database
         function fetchClasses() {
             const classDropdown = document.getElementById("studentClass");
             fetch(GOOGLE_SCRIPT_URL + "?action=getClasses")
@@ -167,15 +223,6 @@
                 .catch(error => {
                     classDropdown.innerHTML = '<option value="" disabled selected>⚠️ បរាជ័យក្នុងការទាញយក</option>';
                 });
-        }
-
-        // ៤. ទីតាំង (Visual Simulation ឱ្យដូចរូបភាពរបស់បង)
-        function checkLocation() {
-            setTimeout(() => {
-                // ទីនេះជាកូដ Mockup ទីតាំង បើបងចង់ដាក់ GPS ពិតប្រាកដអាចបន្ថែមបាន
-                document.getElementById("locationStatus").innerHTML = "✅ ទីតាំងត្រឹមត្រូវ (ចម្ងាយ: 817m)";
-                document.getElementById("locationStatus").style.color = "#27ae60";
-            }, 1500);
         }
 
         // ៥. មុខងារបញ្ជូនវត្តមានទៅ Google Sheets
@@ -209,13 +256,13 @@
             successMsg.style.display = "none";
 
             const payload = {
-                source: "web_app", // ប្រាប់ Google Script ថាមកពីវិបសាយ
+                source: "web_app", 
                 year: year,
                 group: group,
                 class_name: className,
                 name: name,
                 note: note,
-                method: currentMethod // វានឹងរុញពាក្យ Web App ឬ NFC ចូលក្នុង Database
+                method: currentMethod 
             };
 
             fetch(GOOGLE_SCRIPT_URL, {
