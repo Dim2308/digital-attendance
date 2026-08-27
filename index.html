@@ -64,7 +64,6 @@
         </div>
     </div>
 
-    <!-- 🟢 ប្រអប់មុខវិជ្ជាទាញយកពី Database ស្វ័យប្រវត្តិ -->
     <div class="input-group">
         <label for="className">មុខវិជ្ជា (Subject)</label>
         <select id="className" required>
@@ -110,7 +109,6 @@
 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec"; 
     
-    // 🟢 ទាញយកបញ្ជីមុខវិជ្ជាពី Google Sheets ពេលបើកវិបសាយ
     window.onload = function() {
         if(localStorage.getItem("myNpicYear")) document.getElementById("studentYear").value = localStorage.getItem("myNpicYear");
         if(localStorage.getItem("myNpicGroup")) document.getElementById("studentGroup").value = localStorage.getItem("myNpicGroup");
@@ -127,23 +125,20 @@
                     option.text = cls;
                     classDropdown.appendChild(option);
                 });
-                
-                // រើសមុខវិជ្ជាចាស់ដោយស្វ័យប្រវត្តិ
                 var savedClass = localStorage.getItem("myNpicClass");
                 if(savedClass) classDropdown.value = savedClass;
             })
-            .catch(error => {
-                classDropdown.innerHTML = '<option value="" disabled selected>⚠️ បរាជ័យក្នុងការទាញយកបញ្ជី</option>';
-            });
+            .catch(error => { classDropdown.innerHTML = '<option value="" disabled selected>⚠️ បរាជ័យក្នុងការទាញយកបញ្ជី</option>'; });
     };
 
     const urlParams = new URLSearchParams(window.location.search);
+    // 🟢 ចំណុចចាប់យកវិធីសាស្ត្រស្កេន (QR ឬ NFC)
     const scanMethod = urlParams.get('method') || "QR Code";
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
     const TARGET_LAT = 11.597500;  
     const TARGET_LNG = 104.799556; 
-    const ALLOWED_RADIUS = 5000;     
+    const ALLOWED_RADIUS = 500;     
 
     function getDistance(lat1, lon1, lat2, lon2) {
         var R = 6371e3; 
@@ -157,7 +152,6 @@
     function verifyLocationThenCheckIn() {
         var statusMsg = document.getElementById("statusMessage");
         var locInfo = document.getElementById("locInfo");
-        
         var year = document.getElementById("studentYear").value;
         var group = document.getElementById("studentGroup").value;
         var className = document.getElementById("className").value;
@@ -211,8 +205,8 @@
         var note = document.getElementById("note").value;
         var btn = document.getElementById("submitBtn");
         var statusMsg = document.getElementById("statusMessage");
-
         var timeStatus = checkTimeStatus();
+        
         if (timeStatus === "ABSENT") {
             statusMsg.innerHTML = "❌ ហួសម៉ោងស្កេនវត្តមានហើយ!";
             statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
