@@ -26,6 +26,7 @@
         .btn-enroll { background-color: #27ae60; }
         .btn-delete { background-color: #e74c3c; }
         .btn-class { background-color: #3498db; }
+        .btn-hardware { background-color: #8e44ad; }
         .status-message { margin-top: 15px; font-size: 14px; font-weight: bold; display: none; }
         .success { color: #27ae60; } .error { color: #e74c3c; }
         hr { margin: 25px 0; border: 0.5px dashed #ccc; }
@@ -37,7 +38,18 @@
     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
     <h2 class="title">⚙️ ផ្ទាំងគ្រប់គ្រង (Admin)</h2>
     
-    <!-- 🟢 ថ្មី៖ ផ្នែកបន្ថែមមុខវិជ្ជាថ្មីចូលប្រព័ន្ធ -->
+    <!-- 🟢 ថ្មី៖ កំណត់មុខវិជ្ជាឱ្យម៉ាស៊ីន Fingerprint -->
+    <h3 style="color: #8e44ad; font-size: 16px; text-align: left;">👆 កំណត់មុខវិជ្ជាសម្រាប់ម៉ាស៊ីនក្រយៅដៃ</h3>
+    <div class="input-group">
+        <select id="hardwareClass">
+            <option value="" disabled selected>⏳ កំពុងទាញយកមុខវិជ្ជា...</option>
+        </select>
+    </div>
+    <button class="btn-submit btn-hardware" id="btnSetHardware" onclick="setActiveHardwareClass()">កំណត់មុខវិជ្ជាឥឡូវនេះ</button>
+    <div class="status-message" id="hardwareStatus"></div>
+
+    <hr>
+    
     <h3 style="color: #3498db; font-size: 16px; text-align: left;">+ បន្ថែមមុខវិជ្ជាថ្មីចូលប្រព័ន្ធ</h3>
     <div class="input-group">
         <input type="text" id="newClassName" placeholder="ឧទាហរណ៍៖ Math 101">
@@ -60,7 +72,8 @@
         <div class="input-group"><input type="number" id="newId" placeholder="ID (1-127)"></div>
         <div class="input-group"><input type="text" id="newName" placeholder="ឈ្មោះពេញ"></div>
     </div>
-    <button class="btn-submit btn-enroll" onclick="startEnrollment()">ចាប់ផ្តើមចុះឈ្មោះក្រយៅដៃ</button>
+    <button class="btn-submit btn-enroll" id="btnEnroll" onclick="startEnrollment()">ចាប់ផ្តើមចុះឈ្មោះក្រយៅដៃ</button>
+    <div class="status-message" id="enrollStatus"></div>
 
     <hr>
     <h3 style="color: #e74c3c; font-size: 16px; text-align: left;">- លុបក្រយៅដៃសិស្ស</h3>
@@ -68,8 +81,7 @@
         <input type="number" id="deleteId" placeholder="លេខរៀង ID (1-127)">
     </div>
     <button class="btn-submit btn-delete" onclick="startDelete()">បញ្ជាលុបចេញពីម៉ាស៊ីន</button>
-
-    <div class="status-message" id="statusMessage"></div>
+    <div class="status-message" id="deleteStatus"></div>
 </div>
 
 <script>
@@ -81,64 +93,104 @@
     const mqttClient = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby39WkYdxnf64jL95NiO5_2fu4XbgwA_a2O63i4O_SzKRa5gC9aZqSvLsaFBFYZGxIcow/exec"; 
 
-    // 🟢 មុខងារបញ្ជូនមុខវិជ្ជាថ្មីទៅ Database
-    function addNewClass() {
-        var className = document.getElementById("newClassName").value.trim();
-        var statusMsg = document.getElementById("classStatus");
-        var btn = document.getElementById("btnAddClass");
+    // ទាញយកមុខវិជ្ជាពេលបើក Admin ភ្លាម
+    window.onload = function() {
+        var classDropdown = document.getElementById("hardwareClass");
+        fetch(GOOGLE_SCRIPT_URL + "?action=getClasses")
+            .then(response => response.json())
+            .then(data => {
+                classDropdown.innerHTML = '<option value="" disabled selected>-- សូមចុចជ្រើសរើសមុខវិជ្ជា --</option>';
+                data.forEach(function(cls) {
+                    var option = document.createElement("option");
+                    option.value = cls; option.text = cls;
+                    classDropdown.appendChild(option);
+                });
+            })
+            .catch(error => { classDropdown.innerHTML = '<option value="" disabled selected>⚠️ បរាជ័យ</option>'; });
+    };
 
-        if (className === "") {
-            statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលឈ្មោះមុខវិជ្ជាសិន!";
+    function setActiveHardwareClass() {
+        var className = document.getElementById("hardwareClass").value;
+        var statusMsg = document.getElementById("hardwareStatus");
+        var btn = document.getElementById("btnSetHardware");
+
+        if (!className) {
+            statusMsg.innerHTML = "❌ សូមជ្រើសរើសមុខវិជ្ជាសិន!";
             statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
         }
 
         btn.disabled = true; btn.innerHTML = "កំពុងបញ្ជូន..."; statusMsg.style.display = "none";
-        
         fetch(GOOGLE_SCRIPT_URL, { 
             method: 'POST', 
-            body: JSON.stringify({ source: "admin_add_class", class_name: className }) 
+            body: JSON.stringify({ source: "admin_set_active_class", class_name: className }) 
         })
+        .then(response => response.text())
+        .then(data => {
+            statusMsg.innerHTML = "✅ ម៉ាស៊ីនក្រយៅដៃ ត្រូវបានកំណត់ទៅមុខវិជ្ជា <b>" + className + "</b> ជោគជ័យ!";
+            statusMsg.className = "status-message success"; statusMsg.style.display = "block";
+        }).finally(() => { btn.disabled = false; btn.innerHTML = "កំណត់មុខវិជ្ជាឥឡូវនេះ"; });
+    }
+
+    function addNewClass() {
+        var className = document.getElementById("newClassName").value.trim();
+        var statusMsg = document.getElementById("classStatus");
+        var btn = document.getElementById("btnAddClass");
+        if (className === "") {
+            statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលឈ្មោះមុខវិជ្ជាសិន!";
+            statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
+        }
+        btn.disabled = true; btn.innerHTML = "កំពុងបញ្ជូន..."; statusMsg.style.display = "none";
+        fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ source: "admin_add_class", class_name: className }) })
         .then(response => response.text())
         .then(data => {
             if (data === "Success") {
                 statusMsg.innerHTML = "✅ បានបញ្ចូលមុខវិជ្ជាថ្មីទៅកាន់ប្រព័ន្ធជោគជ័យ!";
                 statusMsg.className = "status-message success"; statusMsg.style.display = "block";
                 document.getElementById("newClassName").value = "";
+                // Refresh dropdown
+                window.onload();
             } else if (data === "Exist") {
                 statusMsg.innerHTML = "⚠️ មុខវិជ្ជានេះមាននៅក្នុងបញ្ជីរួចហើយ!";
                 statusMsg.className = "status-message"; statusMsg.style.color = "#f39c12"; statusMsg.style.display = "block";
-            } else {
-                statusMsg.innerHTML = "❌ មានបញ្ហា: " + data;
-                statusMsg.className = "status-message error"; statusMsg.style.display = "block";
             }
-        })
-        .catch(error => {
-            statusMsg.innerHTML = "❌ មិនអាចភ្ជាប់ទៅសើវើបានទេ!";
-            statusMsg.className = "status-message error"; statusMsg.style.display = "block";
         }).finally(() => { btn.disabled = false; btn.innerHTML = "បញ្ជូនទៅកាន់សៀវភៅវត្តមាន"; });
     }
 
+    // 🟢 អាប់ដេតមុខងារចុះឈ្មោះ៖ រុញចូល Database ផង និងបញ្ជាម៉ាស៊ីនផង
     function startEnrollment() {
         var year = document.getElementById("newYear").value;
         var group = document.getElementById("newGroup").value;
         var id = document.getElementById("newId").value;
         var name = document.getElementById("newName").value.trim();
-        var statusMsg = document.getElementById("statusMessage");
+        var statusMsg = document.getElementById("enrollStatus");
+        var btn = document.getElementById("btnEnroll");
 
         if (id === "" || name === "") {
             statusMsg.innerHTML = "❌ សូមបំពេញលេខ ID និងឈ្មោះឱ្យបានត្រឹមត្រូវ!";
             statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
         }
 
-        mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "enroll", id: parseInt(id), name: name, year: year, group: group }));
-        statusMsg.innerHTML = "⏳ សូមប្រាប់សិស្សឱ្យដាក់ម្រាមដៃលើម៉ាស៊ីន (២ ដង)...";
-        statusMsg.className = "status-message"; statusMsg.style.color = "#f39c12"; statusMsg.style.display = "block";
-        document.getElementById("newId").value = ""; document.getElementById("newName").value = "";
+        btn.disabled = true; btn.innerHTML = "កំពុងចុះឈ្មោះក្នុង Database...";
+
+        // ១. បញ្ជូនទិន្នន័យចូល Database ជាមុនសិន
+        fetch(GOOGLE_SCRIPT_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ source: "admin_enroll", id: id, name: name, year: year, group: group }) 
+        })
+        .then(response => response.text())
+        .then(data => {
+            // ២. ពេល Database ជោគជ័យ ទើបបញ្ជាម៉ាស៊ីន ESP32
+            mqttClient.publish('classroom/checkin', JSON.stringify({ cmd: "enroll", id: parseInt(id), name: name, year: year, group: group }));
+            
+            statusMsg.innerHTML = "✅ Database រក្សាទុករួចរាល់!<br>⏳ សូមប្រាប់សិស្សឱ្យដាក់ម្រាមដៃលើម៉ាស៊ីន (២ ដង)...";
+            statusMsg.className = "status-message"; statusMsg.style.color = "#f39c12"; statusMsg.style.display = "block";
+            document.getElementById("newId").value = ""; document.getElementById("newName").value = "";
+        }).finally(() => { btn.disabled = false; btn.innerHTML = "ចាប់ផ្តើមចុះឈ្មោះក្រយៅដៃ"; });
     }
 
     function startDelete() {
         var id = document.getElementById("deleteId").value;
-        var statusMsg = document.getElementById("statusMessage");
+        var statusMsg = document.getElementById("deleteStatus");
         if (id === "") {
             statusMsg.innerHTML = "❌ សូមវាយបញ្ចូលលេខ ID ដែលអ្នកចង់លុប!";
             statusMsg.className = "status-message error"; statusMsg.style.display = "block"; return;
